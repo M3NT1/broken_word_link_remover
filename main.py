@@ -168,7 +168,7 @@ def list_and_manage_links():
     csv_path = os.path.join(output_folder, "Frissített_Hivatkozások.csv")
     save_csv(links_array, csv_path)
 
-    # Highlight links in the document
+    # Highlight links in the documents
     all_links = [link[0] for link in links_array]
     highlighted_doc_path = highlight_links_in_document(doc_path, all_links)
     log_message(log_file, f"Highlighted document saved at: {highlighted_doc_path}")
