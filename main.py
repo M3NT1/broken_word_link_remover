@@ -31,23 +31,29 @@ def log_message(log_file, message):
         f.write(f"{datetime.datetime.now()} - {message}\n")
 
 
-def extract_hyperlinks(doc_path):
-    logging.info(f"Extracting hyperlinks from {doc_path}")
+def extract_hyperlinks_and_bookmarks(doc_path):
+    logging.info(f"Extracting hyperlinks and bookmarks from {doc_path}")
     with open(doc_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
         html = result.value
 
-    # Parse the HTML to find hyperlinks
+    # Parse the HTML to find hyperlinks and bookmarks
     soup = BeautifulSoup(html, "html.parser")
     hyperlinks = []
+    bookmarks = set()
+
     for a in soup.find_all("a", href=True):
         hyperlink = a["href"]
         text = a.get_text()
         hyperlinks.append((hyperlink, text))
         logging.info(f"Extracted hyperlink: {hyperlink} with text: {text}")
 
-    logging.info("Extraction of hyperlinks completed.")
-    return hyperlinks
+    for bookmark in soup.find_all("a", id=True):
+        bookmarks.add(bookmark["id"])
+        logging.info(f"Found bookmark: {bookmark['id']}")
+
+    logging.info("Extraction of hyperlinks and bookmarks completed.")
+    return hyperlinks, bookmarks
 
 
 def save_csv(data, file_path):
@@ -77,12 +83,19 @@ def list_and_manage_links():
     log_file = initialize_log_file(output_folder)
     log_message(log_file, "Dokumentum feldolgozásának kezdete")
 
-    # Extract hyperlinks
-    hyperlinks = extract_hyperlinks(doc_path)
+    # Extract hyperlinks and bookmarks
+    hyperlinks, bookmarks = extract_hyperlinks_and_bookmarks(doc_path)
 
     links_array = []
     for hyperlink, text in hyperlinks:
-        link_status = "Külső hivatkozás" if hyperlink.startswith("http") else "Egyéb hivatkozás"
+        if hyperlink.startswith("#"):
+            if hyperlink[1:] in bookmarks:
+                link_status = "Belső hivatkozás (kereszthivatkozás)"
+            else:
+                link_status = "Belső hivatkozás (szellem hivatkozás)"
+        else:
+            link_status = "Külső hivatkozás"
+
         links_array.append([
             hyperlink,
             text,

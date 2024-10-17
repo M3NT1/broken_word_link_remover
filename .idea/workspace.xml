@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="35513ead-5f30-4ffd-99fe-8da8078377fe" name="Changes" comment="Második verzió">
+    <list default="true" id="35513ead-5f30-4ffd-99fe-8da8078377fe" name="Changes" comment="Mammoth és BeautifulSoup használata POC">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
@@ -89,12 +89,21 @@
       <option name="project" value="LOCAL" />
       <updated>1729172174423</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Mammoth és BeautifulSoup használata POC">
+      <option name="closed" value="true" />
+      <created>1729174830906</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1729174830906</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Első verzió" />
     <MESSAGE value="Második verzió" />
-    <option name="LAST_COMMIT_MESSAGE" value="Második verzió" />
+    <MESSAGE value="Mammoth és BeautifulSoup használata POC" />
+    <option name="LAST_COMMIT_MESSAGE" value="Mammoth és BeautifulSoup használata POC" />
   </component>
 </project>
