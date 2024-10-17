@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import datetime
 from docx2pdf import convert
 from PyPDF2 import PdfReader
+from collections import defaultdict
 
 # Logging setup
 logging.basicConfig(filename='link_manager.log', level=logging.DEBUG,
@@ -53,11 +54,13 @@ def extract_hyperlinks_and_bookmarks(doc_path):
     soup = BeautifulSoup(html, "html.parser")
     hyperlinks = []
     bookmarks = set()
+    order = 0
 
     for a in soup.find_all("a", href=True):
         hyperlink = a["href"]
         text = a.get_text()
-        hyperlinks.append((hyperlink, text))
+        hyperlinks.append((hyperlink, text, order))
+        order += 1
         logging.info(f"Extracted hyperlink: {hyperlink} with text: {text}")
 
     for bookmark in soup.find_all("a", id=True):
@@ -68,16 +71,16 @@ def extract_hyperlinks_and_bookmarks(doc_path):
     return hyperlinks, bookmarks
 
 
-def extract_page_numbers(pdf_path, hyperlinks, start_page):
-    logging.info(f"Extracting page numbers from {pdf_path} starting from page {start_page}")
+def extract_page_numbers(pdf_path, hyperlinks):
+    logging.info(f"Extracting page numbers from {pdf_path}")
     reader = PdfReader(pdf_path)
-    link_pages = {}
+    link_pages = defaultdict(list)
 
-    for page_number, page in enumerate(reader.pages[start_page - 1:], start=start_page):
+    for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text()
-        for hyperlink, link_text in hyperlinks:
-            if link_text in text and hyperlink not in link_pages:
-                link_pages[hyperlink] = page_number
+        for hyperlink, link_text, order in hyperlinks:
+            if link_text in text:
+                link_pages[hyperlink].append((page_number, order))
                 logging.info(f"Hyperlink: {hyperlink} found on page {page_number}")
 
     return link_pages
@@ -123,11 +126,11 @@ def list_and_manage_links():
     # Extract hyperlinks and bookmarks
     hyperlinks, bookmarks = extract_hyperlinks_and_bookmarks(doc_path)
 
-    # Extract page numbers
-    link_pages = extract_page_numbers(pdf_path, hyperlinks, start_page)
+    # Extract page numbers for all pages
+    link_pages = extract_page_numbers(pdf_path, hyperlinks)
 
     links_array = []
-    for hyperlink, text in hyperlinks:
+    for hyperlink, text, order in hyperlinks:
         if hyperlink.startswith("#"):
             if hyperlink[1:] in bookmarks:
                 link_status = "Belső hivatkozás (kereszthivatkozás)"
@@ -136,21 +139,34 @@ def list_and_manage_links():
         else:
             link_status = "Külső hivatkozás"
 
-        page_number = link_pages.get(hyperlink, "N/A")
-        links_array.append([
-            hyperlink,
-            text,
-            link_status,
-            page_number,
-            "NEM"
-        ])
-        logging.info(f"Processed hyperlink: {hyperlink}, Status: {link_status}, Text: {text}, Page: {page_number}")
+        page_numbers = link_pages.get(hyperlink, [])
+        for page_number, original_order in page_numbers:
+            if page_number >= start_page:
+                links_array.append([
+                    hyperlink,
+                    text,
+                    link_status,
+                    page_number,
+                    "NEM",
+                    original_order
+                ])
+                logging.info(
+                    f"Processed hyperlink: {hyperlink}, Status: {link_status}, Text: {text}, Page: {page_number}")
 
-    # Sort links_array by page number, putting "N/A" at the end
-    links_array.sort(key=lambda x: (x[3] == "N/A", x[3]))
+    # Sort links_array by page number, then by original order
+    links_array.sort(key=lambda x: (x[3], x[5]))
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_links_array = []
+    for link in links_array:
+        key = (link[0], link[1], link[3])  # Cél, Link Szöveg, Oldalszám
+        if key not in seen:
+            seen.add(key)
+            unique_links_array.append(link[:-1])  # Remove the temporary order column
 
     csv_path = os.path.join(output_folder, "Frissített_Hivatkozások.csv")
-    save_csv(links_array, csv_path)
+    save_csv(unique_links_array, csv_path)
 
     log_message(log_file, "Dokumentum mentve")
     log_message(log_file, "Naplózás vége: " + str(datetime.datetime.now()))
