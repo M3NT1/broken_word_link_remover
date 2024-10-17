@@ -5,6 +5,8 @@ from tkinter import Tk, filedialog
 import mammoth
 from bs4 import BeautifulSoup
 import datetime
+from docx2pdf import convert
+from PyPDF2 import PdfReader
 
 # Logging setup
 logging.basicConfig(filename='link_manager.log', level=logging.DEBUG,
@@ -31,6 +33,17 @@ def log_message(log_file, message):
         f.write(f"{datetime.datetime.now()} - {message}\n")
 
 
+def convert_to_pdf(doc_path, output_folder):
+    pdf_path = os.path.join(output_folder, "converted_document.pdf")
+    try:
+        convert(doc_path, pdf_path)
+        logging.info(f"Document converted to PDF: {pdf_path}")
+    except Exception as e:
+        logging.error(f"Error converting to PDF: {e}")
+        raise
+    return pdf_path
+
+
 def extract_hyperlinks_and_bookmarks(doc_path):
     logging.info(f"Extracting hyperlinks and bookmarks from {doc_path}")
     with open(doc_path, "rb") as docx_file:
@@ -54,6 +67,21 @@ def extract_hyperlinks_and_bookmarks(doc_path):
 
     logging.info("Extraction of hyperlinks and bookmarks completed.")
     return hyperlinks, bookmarks
+
+
+def extract_page_numbers(pdf_path, hyperlinks):
+    logging.info(f"Extracting page numbers from {pdf_path}")
+    reader = PdfReader(pdf_path)
+    link_pages = {}
+
+    for page_number, page in enumerate(reader.pages, start=1):
+        text = page.extract_text()
+        for hyperlink, link_text in hyperlinks:
+            if link_text in text:
+                link_pages[hyperlink] = page_number
+                logging.info(f"Hyperlink: {hyperlink} found on page {page_number}")
+
+    return link_pages
 
 
 def save_csv(data, file_path):
@@ -83,8 +111,14 @@ def list_and_manage_links():
     log_file = initialize_log_file(output_folder)
     log_message(log_file, "Dokumentum feldolgozásának kezdete")
 
+    # Convert to PDF
+    pdf_path = convert_to_pdf(doc_path, output_folder)
+
     # Extract hyperlinks and bookmarks
     hyperlinks, bookmarks = extract_hyperlinks_and_bookmarks(doc_path)
+
+    # Extract page numbers
+    link_pages = extract_page_numbers(pdf_path, hyperlinks)
 
     links_array = []
     for hyperlink, text in hyperlinks:
@@ -96,14 +130,15 @@ def list_and_manage_links():
         else:
             link_status = "Külső hivatkozás"
 
+        page_number = link_pages.get(hyperlink, "N/A")
         links_array.append([
             hyperlink,
             text,
             link_status,
-            "N/A",  # Page number extraction is not directly supported
+            page_number,
             "NEM"
         ])
-        logging.info(f"Processed hyperlink: {hyperlink}, Status: {link_status}, Text: {text}")
+        logging.info(f"Processed hyperlink: {hyperlink}, Status: {link_status}, Text: {text}, Page: {page_number}")
 
     csv_path = os.path.join(output_folder, "Frissített_Hivatkozások.csv")
     save_csv(links_array, csv_path)
